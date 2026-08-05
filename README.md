@@ -1,11 +1,11 @@
-# SQUISHE
+# SPARTA
 
-*Spectral QUick-look for In-Situ High-pressure Experiments* — reduction and
+*SPectroscopic Absorption, Real Time Analysis* — reduction and
 publication-quality visualization of visible / near-IR optical-absorption
 spectra from diamond-anvil-cell experiments (developed for NSLS-II beamline
-22-IR-1; formerly the Beamline DAC Data Tool).
+22-IR-1; formerly SQUISHE, originally the Beamline DAC Data Tool).
 
-![SQUISHE — filled 3D ridge view of a 19-pressure absorbance series](docs/screenshot.png)
+![SPARTA — filled 3D ridge view of a 19-pressure absorbance series](docs/screenshot.png)
 
 ## What it does
 
@@ -42,11 +42,73 @@ spectra from diamond-anvil-cell experiments (developed for NSLS-II beamline
   gaps and spine widths, Crameri perceptually-uniform colormaps.
 - **Traceability**: every reduction and export writes a JSON provenance
   sidecar (tool version, parameters, timestamps, file hashes).
-- **A designed interface**: the SQUISHE visual system — bundled Jost
+- **A designed interface**: the SPARTA visual system — bundled Jost
   typeface (OFL), per-theme accent triads across every control, geometric
   icon set, themed title bar and top banner, a named theme set (from clean
   Standard Light and true-black to Rainbow, Coast Guard, and more), and an
   adjustable interface text size.
+
+## New in v1.4.8
+
+- **SPARTA**: the program is now SPARTA — *SPectroscopic Absorption, Real
+  Time Analysis* (formerly SQUISHE). Same tool, settings, and file formats;
+  the About page records the lineage.
+- **Generic experiment variable**: the independent variable is no longer
+  hard-wired to pressure. A Series variable row in the Plot mode box offers
+  Pressure (GPa), Temperature (K), Dose (Gy), Time (min), or a fully custom
+  name and unit — every legend entry, colorbar, table header, inspect
+  title, and 3D axis follows the choice, while CSV columns, folder names,
+  and provenance keys stay exactly as before (old outputs and scripts keep
+  working; exports additionally record the variable name and unit).
+- **C/D-tagged CSV export**: one button writes the per-point absorbance
+  CSVs with the branch in the filename (`..._C_absorbance.csv` /
+  `..._D_absorbance.csv`), taken from the same compression/decompression
+  state the plot shows, with a provenance sidecar.
+- **Auto rescan**: a pill toggle with an adjustable interval (default 30 s)
+  polls the input folder between measurements and re-reduces when new
+  files appear — the live-acquisition watch mode; the manual Rescan button
+  stays, and F5 or Enter in the folder box rescans on demand.
+- **Quality of life**: recent-folders dropdown (and right-click) on both
+  folder boxes; drag-and-drop a folder onto the window; Escape closes
+  every dialog and dialogs open centered; mouse-wheel zoom in the 3D view;
+  double-click a pane divider to reset it; the journal preset and the
+  export file format can be remembered as defaults; interface text size
+  now goes down to 3; assorted tooltips, theming fixes on two popups, and
+  a repaired Ctrl+Shift+C copy-figure shortcut.
+- **Formulas**: define your own quantity as ordinary arithmetic over the
+  loaded columns — raw sample / background / dark counts, wavelength,
+  absorbance, and the defringed and smoothed variants. The editor shows
+  the real typeset formula (derived from what you type, so the picture
+  cannot disagree with the arithmetic), lists problems live, and previews
+  min / max / NaN as you go. Expressions are checked against a whitelist
+  *before* anything runs — no names beyond the columns, no attributes,
+  indexing, imports, or eval — so a rejected formula is never executed.
+  A formula plots on the Y axis beside absorbance and exports as its own
+  separate two-column CSVs; the absorbance CSVs a Run writes are never
+  touched or extended.
+- **Saved variable presets**: a custom Series name and unit can be starred
+  into the dropdown, so a field, pH, or dose run is one pick next time.
+- **A quieter interface**: a spacing and consistency overhaul across every
+  panel (one gutter, one row rhythm, sub-headings drawn one way instead of
+  three), geometric icons on the panel tabs and the main buttons, and
+  rounded accent buttons for the primary actions.
+- **Faster**: startup is about 40% quicker, a theme switch about 44%, and
+  typing in the Name-format editor is now instant rather than
+  re-parsing the folder per keystroke.
+- **Eleven bug fixes**: a junk or infinite auto-rescan interval no longer
+  throws (or arms a dead timer); a Variable named like a parser field no
+  longer bricks the Name-format dialog; short traces and oversize
+  smoothing windows no longer crash the filter, the settings dialog, or
+  the smoothed export; units containing backslashes are substituted
+  literally; C/D-tagged export counts traces, not colliding labels; an
+  auto-rescan tick skips while a modal is open and can no longer orphan
+  its own timer; a malformed file drop is rejected; and a long branch
+  label, a long Variable name, and the 500-file preview cap are capped or
+  disclosed instead of overflowing the layout.
+- **Runs on older Tk**: a keysym missing from Tk 8.6.9 (what Python 3.8.10
+  ships, and what Windows 7 machines tend to have) used to abort startup
+  before the window appeared.
+- The test suite is now 335+ tests.
 
 ## New in v1.4.7
 
@@ -177,7 +239,7 @@ pip install -r requirements.txt
 pyinstaller beamline_tool.spec
 ```
 
-The result is a self-contained folder at `dist\SQUISHE\`. Ship the whole
+The result is a self-contained folder at `dist\SPARTA\`. Ship the whole
 folder. A onedir build (rather than a single packed .exe) is used
 deliberately: it starts faster and is far less likely to be flagged by
 antivirus / SmartScreen. If SmartScreen warns on first launch (expected for
@@ -199,6 +261,19 @@ any unsigned exe): More info -> Run anyway.
 
 ## Version history
 
+- **v1.4.8** — SPARTA rebrand (formerly SQUISHE); generic experiment
+  variable (pressure/temperature/dose/time/custom name+unit driving every
+  label, file schema unchanged) with starrable saved presets; user-defined
+  formulas (typeset preview, whitelist-checked expressions, separate
+  two-column CSV export); C/D-tagged CSV export; auto-rescan watch
+  mode with adjustable interval plus F5/Enter manual rescan; QoL batch
+  (recent-folders dropdowns, folder drag-and-drop, Escape + centering on
+  all dialogs, 3D wheel zoom, divider double-click reset, journal-preset
+  and export-format memory, text size to 3, shortcut and theming fixes);
+  spacing and consistency overhaul with tab/button icons and rounded
+  accent buttons; ~40% faster startup, ~44% faster theme switch, instant
+  Name-format typing; eleven bug fixes; Tk 8.6.9 / Windows 7 startup fix;
+  suite grown to 335+ tests.
 - **v1.4.7** — full user control of grating-segment numbering in custom
   name formats (any separator incl. multi-character and comma-separated
   alternatives, digit or letter schemes, missing-suffix policy incl.

@@ -1,4 +1,7 @@
-# SQUISHE on macOS
+# SPARTA on macOS
+
+*SPectroscopic Absorption, Real Time Analysis* (formerly SQUISHE; originally
+the Beamline DAC Data Tool).
 
 The tool is pure Python (tkinter / numpy / scipy / matplotlib) and runs on
 macOS. Windows-only bits (Explorer open, clipboard copy) have macOS
@@ -20,7 +23,7 @@ works too if you also `brew install python-tk`.
 ## Option B - native .app
 
 On the Mac that will use it, run `./build_mac_app.sh`. The app lands in
-`dist/SQUISHE.app`; drag it to Applications if you like.
+`dist/SPARTA.app`; drag it to Applications if you like.
 First launch: right-click -> Open (it is unsigned, Gatekeeper will warn).
 Note: an Apple Silicon build does not run on Intel Macs and vice versa;
 build on the machine kind you will use.

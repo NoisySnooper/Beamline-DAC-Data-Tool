@@ -1,6 +1,6 @@
 # beamline_tool.spec  --  PyInstaller ONEDIR build for the DAC Quick-Look tool.
 # Build:  pyinstaller beamline_tool.spec
-# Output: dist\SQUISHE\SQUISHE.exe  (ship the whole folder)
+# Output: dist\SPARTA\SPARTA.exe  (ship the whole folder)
 
 from PyInstaller.utils.hooks import collect_all
 
@@ -14,7 +14,7 @@ hiddenimports += ["win32clipboard", "win32con", "pywintypes"]
 # ship the app icon so the runtime title-bar/taskbar icon loads (app.py
 # reads icon.png from sys._MEIPASS when frozen)
 datas += [("icon.png", ".")]
-# brand typeface (SQUISHE / DESIGN_SQUISHE.md): Jost statics + license,
+# brand typeface (SPARTA / DESIGN_RULES.md): Jost statics + license,
 # loaded privately at startup from <app dir>/fonts
 datas += [("fonts/Jost-Regular.ttf", "fonts"),
           ("fonts/Jost-Medium.ttf", "fonts"),
@@ -41,7 +41,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="SQUISHE",
+    name="SPARTA",
     debug=False,
     strip=False,
     upx=False,
@@ -56,5 +56,5 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=False,
-    name="SQUISHE",
+    name="SPARTA",
 )

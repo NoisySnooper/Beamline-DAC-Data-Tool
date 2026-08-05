@@ -45,9 +45,21 @@ def _cutoff(y, limit):
 
 def _density(y, win, min_pts):
     """NaN points with fewer than min_pts finite values (self included) in a
-    centred window of 2*(win//2)+1 points."""
+    centred window of 2*(win//2)+1 points.
+
+    The window is clamped to the trace: np.convolve(mode='same') returns
+    max(len(y), len(kernel)) points, so a kernel LONGER than the trace
+    (short/synthetic trace, or an over-large Window (pts)) used to hand
+    back a mask longer than y and raise IndexError. Clamping to the
+    largest odd kernel that still fits leaves every trace long enough for
+    the requested window bit-for-bit unchanged."""
+    n = len(y)
+    if n == 0:
+        return                      # nothing to mask (np.convolve rejects it)
+    half = max(0, int(win // 2))
+    if 2 * half + 1 > n:
+        half = (n - 1) // 2         # largest centred window the trace holds
     finite = np.isfinite(y).astype(float)
-    half = int(win // 2)
     kernel = np.ones(2 * half + 1)
     counts = np.convolve(finite, kernel, mode="same")
     y[counts < min_pts] = np.nan

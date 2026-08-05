@@ -34,3 +34,6 @@ AUDIT_*.md
 DESIGN_*.md
 RELEASE_NOTES_*
 thickness_proto.py
+
+# win7 package tree (rebuilt on demand)
+dist_win7/
