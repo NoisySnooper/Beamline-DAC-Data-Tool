@@ -96,6 +96,14 @@ add_column("wl", "Wavelength in nm (the grid every column shares)",
            r"\lambda", ("wavelength", "wavelength_nm", "nm"))
 add_column("A", "Absorbance as the pipeline computes it, "
                 "-log10[(S - D)/(B - D)]", "A", ("absorbance",))
+# Optical thickness. Per TRACE, not per point: the caller hands it in as a
+# constant column over the same wavelength grid, so it divides an absorbance
+# spectrum without any shape rules of its own. NaN wherever the fringe
+# detector found nothing confident, which propagates to NaN and is drawn as
+# a gap -- the honest answer, not a guessed thickness.
+add_column("t", "Optical thickness n*t of the sample channel in um, from "
+                "the fringe detection (NaN when no fringe was found)", "t",
+           ("thickness", "nt_um"))
 
 
 def column_names():
@@ -661,9 +669,17 @@ def _builtin(name, expr, unit=""):
 # Absorbance is the pipeline's own definition, spelled out in formula form so
 # the editor can show users exactly what they are starting from; it must stay
 # numerically identical to engine.process_group (a test proves it).
+#
+# The two thickness-normalised forms are builtins for the same reason: they
+# are the standard way to turn a path-length-dependent absorbance into a
+# material property, and writing the um -> cm conversion by hand is exactly
+# where a factor of 10^4 goes missing. t is in um, so t_cm = t * 1e-4 and
+# alpha = ln(10) * A / t_cm comes out in cm^-1; A/t stays in um^-1.
 BUILTINS = (
     _builtin("Absorbance", "-log10((S - D) / (B - D))"),
     _builtin("Transmittance", "(S - D) / (B - D)"),
+    _builtin("Absorption coefficient", "log(10) * A / (t * 1e-4)", "cm^-1"),
+    _builtin("A/t", "A / t", "um^-1"),
 )
 
 

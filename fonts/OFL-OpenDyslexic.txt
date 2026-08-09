@@ -1,0 +1,17 @@
+OpenDyslexic (OpenDyslexic-Regular / Bold / Italic / Bold-Italic .otf)
+
+Embedded notice: "Copyright (c) 2019 by Abbie Gonzalez. All rights reserved."
+(https://opendyslexic.org | github.com/antijingoist/opendyslexic)
+
+OpenDyslexic is published by its author under the SIL Open Font License,
+Version 1.1 (the project's stated license).
+
+The full text of the SIL Open Font License, Version 1.1 is in OFL.txt in
+this folder (the license text is identical for every OFL-licensed font;
+only the copyright notice above differs). It is also available with a FAQ
+at: http://scripts.sil.org/OFL
+
+The fonts are shipped for SPARTA's two Dyslexic themes and are loaded
+privately at startup (FR_PRIVATE - nothing is installed on the system).
+Swapping the typeface: drop any other family's .ttf/.otf files in this
+folder and adjust DYS_FONT_FILES / _resolve_dyslexic_font() in app.py.

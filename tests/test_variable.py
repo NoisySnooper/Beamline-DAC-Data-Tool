@@ -3,57 +3,37 @@
 The number parsed out of a file name IS the variable's value (still stored as
 pressure_val / pressure_str); only the LABELING is dynamic. These lock the
 default (Pressure / GPa) against regression, the preset and Custom paths,
-persistence through a save/load preset cycle, and that presets written before
-v1.5.0 still load. Needs a Tk display, so the module skips on a headless box.
+persistence through a save/load preset cycle, that presets written before
+v1.5.0 still load, and that the drawn labels + the export provenance follow
+the variable.
+
+Runs against the suite's ONE shared App (tests/conftest.py); the shared reset
+fixture puts the variable back to Pressure (GPa) after every test.
 """
-import numpy as np
 import pytest
 
-try:
-    import tkinter as tk
-    # Reuse an existing default root if another GUI test module already made
-    # one: this Windows Store Python cannot spin up a SECOND independent Tk()
-    # interpreter (see test_sessions.py).
-    _root = tk._default_root or tk.Tk()
-    _root.withdraw()
-    import app
-    _APP = app.App(_root)
-    _APP._save_settings = lambda: None
-    _HAVE_GUI = True
-except Exception:
-    _HAVE_GUI = False
+import app
+from conftest import gui, make_result, shared_app
 
-pytestmark = pytest.mark.skipif(not _HAVE_GUI, reason="no Tk display")
+USES_APP = True
+pytestmark = gui
+
+
+@pytest.fixture(scope="module")
+def a():
+    return shared_app()
 
 
 def _res(label, pval):
-    """A minimal valid engine-style result dict with real absorbance."""
-    wl = np.linspace(400.0, 1000.0, 60)
-    a = np.linspace(0.1, 1.2, 60)
-    return {"label": label, "dac": "D42", "sample": "fo90",
-            "pressure_str": "%gp0" % pval, "pressure_val": pval, "rep": 1,
-            "branch_tag": None, "wl": wl, "wn": 1e7 / wl,
-            "absorbance": a, "dark_c": np.ones(60),
-            "bg_c": np.full(60, 10.0), "samp_c": np.full(60, 5.0)}
+    return make_result(label, pval, n=60, dac="D42", sample="fo90")
 
 
-@pytest.fixture(autouse=True)
-def _default_variable():
-    """Every test starts from the shipped default."""
-    _APP.xvar_choice.set("Pressure (GPa)")
-    _APP.cbar_label.set("Pressure (GPa)")
-    yield
-    _APP.xvar_choice.set("Pressure (GPa)")
-    _APP.cbar_label.set("Pressure (GPa)")
-
-
-def _load(results):
-    _APP._finish_run([dict(r) for r in results], [], "dest")
+def _load(a, results):
+    a._finish_run([dict(r) for r in results], [], "d")
 
 
 # ---------------------------------------------------------------- defaults --
-def test_default_is_pressure_gpa():
-    a = _APP
+def test_default_is_pressure_gpa(a):
     assert a._vname() == "Pressure"
     assert a._vunit() == "GPa"
     assert a._vlabel() == "Pressure (GPa)"
@@ -62,18 +42,13 @@ def test_default_is_pressure_gpa():
     assert a.cbar_label.get() == "Pressure (GPa)"
 
 
-def test_default_legend_text_unchanged():
-    """The pre-v1.5.0 legend wording is the contract (see test_legend.py)."""
-    assert _APP._ordered_legend([(1, 0.5, "C"), (2, 1.0, "D")])[1] == \
-        ["0.50 GPa - C", "1.00 GPa - D"]
-
-
 # ----------------------------------------------------------------- presets --
-def test_temperature_preset_updates_labels():
-    a = _APP
+def test_presets_and_custom_drive_every_label(a):
+    """A preset renames everything the user sees; a hand-typed colorbar label
+    is never stomped; Custom reveals its two boxes and a blank unit drops the
+    suffix entirely."""
     a.xvar_choice.set("Temperature (K)")
-    assert a._vname() == "Temperature"
-    assert a._vunit() == "K"
+    assert a._vname() == "Temperature" and a._vunit() == "K"
     assert a._vlabel() == "Temperature (K)"
     assert a._vfmt(300.0, "%g") == "300 K"
     assert a._vfmt(12.5) == "12.50 K"
@@ -81,17 +56,12 @@ def test_temperature_preset_updates_labels():
     assert a.cbar_label.get() == "Temperature (K)"
     assert a._ordered_legend([(1, 0.5, "C")])[1] == ["0.50 K - C"]
 
-
-def test_preset_pick_does_not_stomp_a_hand_typed_bar_label():
-    a = _APP
     a.cbar_label.set("My own scale")
     a.xvar_choice.set("Dose (Gy)")
     assert a._vlabel() == "Dose (Gy)"
     assert a.cbar_label.get() == "My own scale"
 
-
-def test_custom_reveals_boxes_and_blank_unit_drops_the_suffix():
-    a = _APP
+    a.xvar_choice.set("Time (min)")
     assert not a._xvar_custom.winfo_manager()      # hidden for a preset
     a.xvar_choice.set(app.XVAR_CUSTOM)
     assert a._xvar_custom.winfo_manager() == "pack"
@@ -107,66 +77,49 @@ def test_custom_reveals_boxes_and_blank_unit_drops_the_suffix():
 
 
 # ------------------------------------------------------------- persistence --
-def test_all_three_vars_are_in_the_preset_registry():
-    reg = _APP._preset_registry()
+def test_variable_round_trips_through_a_preset_cycle(a):
+    """The three vars are registry members, a Custom pair survives a
+    save/load, and hand-edited strings beat the preset's own values."""
+    reg = a._preset_registry()
     for k in ("xvar_choice", "xvar_name", "xvar_unit"):
-        assert k in reg
-        assert k in _APP._defaults
+        assert k in reg and k in a._defaults, k
 
-
-def test_custom_round_trips_through_a_save_load_preset_cycle():
-    a = _APP
     a.xvar_choice.set(app.XVAR_CUSTOM)
     a.xvar_name.set("Dose rate")
     a.xvar_unit.set("Gy/s")
-    saved = {k: v.get() for k, v in a._preset_registry().items()}
+    saved = {k: v.get() for k, v in reg.items()}
 
     a.xvar_choice.set("Pressure (GPa)")            # wander off
     assert a._vlabel() == "Pressure (GPa)"
 
     a._apply_preset_data(saved)                    # and come back
     assert a.xvar_choice.get() == app.XVAR_CUSTOM
-    assert a._vname() == "Dose rate"
-    assert a._vunit() == "Gy/s"
     assert a._vlabel() == "Dose rate (Gy/s)"
     assert a._xvar_custom.winfo_manager() == "pack"
 
-
-def test_preset_name_and_unit_win_over_the_choice_default():
-    """A saved preset that says Temperature but carries hand-edited strings
-    must restore the strings, not the built-in preset values."""
-    a = _APP
     a._apply_preset_data({"xvar_choice": "Temperature (K)",
                           "xvar_name": "Anneal T", "xvar_unit": "degC"})
     assert a._vlabel() == "Anneal T (degC)"
 
 
-def test_legacy_preset_without_xvar_keys_loads_with_pressure_defaults():
-    a = _APP
-    legacy = {"cmap": "magma", "lw": 1.4, "legend_on": True,
-              "cbar_label": "Pressure (GPa)"}       # a pre-v1.5.0 payload
-    a._apply_preset_data(legacy)                    # must not raise
-    assert a._vname() == "Pressure"
-    assert a._vunit() == "GPa"
+def test_legacy_and_starter_presets_load_with_pressure_defaults(a):
+    """A pre-v1.5.0 payload carries no xvar keys at all, and neither do the
+    shipped starter presets: both must land on Pressure (GPa)."""
+    a._apply_preset_data({"cmap": "magma", "lw": 1.4, "legend_on": True,
+                          "cbar_label": "Pressure (GPa)"})
     assert a._vlabel() == "Pressure (GPa)"
     assert a.cbar_label.get() == "Pressure (GPa)"
     assert a.cmap.get() == "magma"                  # the legacy keys applied
 
-
-def test_starter_presets_still_apply():
-    a = _APP
     for name, data in a._starter_presets().items():
-        assert not (set(data) & {"xvar_choice", "xvar_name", "xvar_unit"}), \
-            name
+        assert not (set(data) & {"xvar_choice", "xvar_name", "xvar_unit"}), name
         a._apply_preset_data(data)
         assert a._vlabel() == "Pressure (GPa)"
 
 
 # ------------------------------------------------------------ drawn labels --
-def test_legend_and_colorbar_labels_follow_the_variable():
-    a = _APP
-    _load([_res("D42 fo90 1.00 GPa", 1.0),
-           _res("D42 fo90 12.50 GPa", 12.5)])
+def test_legend_and_colorbar_labels_follow_the_variable(a):
+    _load(a, [_res("D42 fo90 1.00 GPa", 1.0), _res("D42 fo90 12.50 GPa", 12.5)])
     a.cmap.set("viridis")                 # continuous -> colorbar allowed
     a.wf_mode.set("off")
     a.mode.set("overlay")
@@ -187,9 +140,9 @@ def test_legend_and_colorbar_labels_follow_the_variable():
     a.colorbar_on.set(True)
     a._last_cbar = None
     a._redraw_now()
-    cb = a._last_cbar
-    assert cb is not None
-    assert (cb.ax.get_ylabel() or cb.ax.get_xlabel()) == "Temperature (K)"
+    assert a._last_cbar is not None
+    assert (a._last_cbar.ax.get_ylabel()
+            or a._last_cbar.ax.get_xlabel()) == "Temperature (K)"
 
     a.xvar_choice.set(app.XVAR_CUSTOM)
     a.xvar_name.set("Field")
@@ -199,16 +152,15 @@ def test_legend_and_colorbar_labels_follow_the_variable():
     assert (a._last_cbar.ax.get_ylabel()
             or a._last_cbar.ax.get_xlabel()) == "Field (T)"
 
-    a.colorbar_on.set(False)
-    a.legend_on.set(True)
-    a._redraw_now()
 
-
-def test_trace_rows_and_readout_header_follow_the_variable():
-    a = _APP
-    _load([_res("D42 fo90 12.50 GPa", 12.5)])
+def test_trace_rows_and_engine_labels_follow_the_variable(a):
+    """Records keep engine's ' GPa' spelling (it feeds dict keys and output
+    file names); only what is DRAWN is rewritten."""
+    _load(a, [_res("D42 fo90 12.50 GPa", 12.5)])
     lbl = a.results[0]["label"]
     assert a._disp_of(lbl) == "12.50 GPa"
+    assert a._relabel("D42 fo90 12.50 GPa [C]") == "D42 fo90 12.50 GPa [C]"
+
     a.xvar_choice.set("Dose (Gy)")
     assert a._disp_of(lbl) == "12.50 Gy"
     a._build_trace_checks()
@@ -218,12 +170,6 @@ def test_trace_rows_and_readout_header_follow_the_variable():
              if w.winfo_class() == "TCheckbutton" and w.cget("text") != "D"]
     assert texts == ["12.50 Gy"]
 
-
-def test_engine_label_relabelled_for_display_only():
-    """Records keep engine's ' GPa' spelling (it feeds dict keys and output
-    file names); only what is DRAWN is rewritten."""
-    a = _APP
-    assert a._relabel("D42 fo90 12.50 GPa [C]") == "D42 fo90 12.50 GPa [C]"
     a.xvar_choice.set("Temperature (K)")
     assert a._relabel("D42 fo90 12.50 GPa [C]") == "D42 fo90 12.50 K [C]"
     a.xvar_choice.set(app.XVAR_CUSTOM)
@@ -232,8 +178,7 @@ def test_engine_label_relabelled_for_display_only():
 
 
 # -------------------------------------------------------------- provenance --
-def test_export_metadata_carries_the_variable():
-    a = _APP
+def test_export_metadata_carries_the_variable(a):
     a.xvar_choice.set("Temperature (K)")
     png = a._export_metadata("png")
     assert png["variable_name"] == "Temperature"

@@ -5,7 +5,7 @@ publication-quality visualization of visible / near-IR optical-absorption
 spectra from diamond-anvil-cell experiments (developed for NSLS-II beamline
 22-IR-1; formerly SQUISHE, originally the Beamline DAC Data Tool).
 
-![SPARTA — filled 3D ridge view of a 19-pressure absorbance series](docs/screenshot.png)
+![SPARTA — the 3D shape surface of the bundled demo series, with the measured traces marked on the sheet](docs/screenshot.png)
 
 ## What it does
 
@@ -24,9 +24,9 @@ spectra from diamond-anvil-cell experiments (developed for NSLS-II beamline
 - **Removes diamond-anvil interference fringes** (FFT-notch defringe with a
   Fisher g-test acceptance gate) and applies the lab's 5-step
   Savitzky-Golay smoothing pipeline.
-- Interactive plotting: overlay, inspect-one-pressure, 2D stacked waterfall,
-  and a filled 3D ridge view with camera presets, keyboard orbit, box-frame
-  options, and per-axis stretch.
+- Interactive plotting: overlay, inspect-one-pressure, 2D stacked,
+  a filled 3D ridge view, and a continuous 3D shape surface — with camera
+  presets, keyboard orbit, box-frame options, and per-axis stretch.
 
 ## Highlights (v1.4)
 
@@ -47,6 +47,89 @@ spectra from diamond-anvil-cell experiments (developed for NSLS-II beamline
   icon set, themed title bar and top banner, a named theme set (from clean
   Standard Light and true-black to Rainbow, Coast Guard, and more), and an
   adjustable interface text size.
+
+## New in v1.4.9
+
+- **Diamond fringe workbench**: a Fringe tab and a switchable centre view
+  (Plot | Fringe) that reads the interference fringes in the raw spectra —
+  measured |FFT| against n·t per channel, notch bands you set by clicking a
+  peak, model stems with Airy harmonics, and a Solve step that returns the
+  sample's refractive index and thickness with the medium and any second
+  layer accounted for. Vendored from Matthew R. Diamond's `defringe_dac.py`
+  with permission (MIT), refactored pandas-free and validated against the
+  original to 1e-10 on real spectra. The workbench follows Matthew's own
+  routine: the low-pass filter is the main tool, the notch list sits in the
+  Panels menu, and there is no separate Defringe section any more — the FFT
+  removal card in the Fringe tab *is* the defringe control, and the main
+  plot's defringed display and the Run's defringed CSVs read from it. A
+  **Detection** card holds the gates that decide when a fringe is real —
+  the wavelength window (overridable per dataset), the n·t search band,
+  the Fisher p gate, and how closely two of the three detection windows
+  must agree. **Pop out** opens a full replica of his window — his
+  sidebar, his 2x2 figure, his menus — bound to the same model, so the tab
+  and the pop-out stay in step, and it fills the screen on F11 (Escape
+  leaves again). Every card in the Fringe tab carries a **[?] box** with
+  the maths behind it and the papers it comes from, so the model a number
+  came out of is one click away.
+- **3D shape**: a fourth mode in the **Stacked & 3D** box (the section
+  formerly called Waterfall). Adjacent pressure traces are joined
+  into one continuous gradient surface (wavelength × pressure, absorbance as
+  height) you can orbit — with a filled underside, relief shading, and a
+  choice of interpolation along the pressure axis. The same surface exports
+  from the Export tab's **3D Printing** section as a **watertight binary
+  STL** — a printable solid with closed sides and a flat base slab, with
+  physical size, base thickness and Z exaggeration controls plus the usual
+  provenance sidecar.
+- **Thickness vs pressure** plot mode, and `α = ln(10)·A/t` and `A/t`
+  as formula builtins, with sample thickness `t` available as a per-trace
+  quantity in the formula editor.
+- **Decompression trace controls**: line style, width, opacity and markers
+  for the D branch, mirroring the compression controls across overlay,
+  stacked and 3D — plus decompression-list CSV ingestion for datasets
+  whose filenames carry no `_D` tag.
+- **Guided tour and first-run welcome**: a game-style walkthrough that dims
+  the window around whichever control is being explained and lets you click
+  the real thing, driven by a small bundled synthetic demo dataset
+  (`demo_data/`) so you can try the whole path before your own data is
+  anywhere near it. Chapters can be skipped or jumped to, and any step that
+  asks you to do something will do it for you if you would rather watch.
+- **Make it yours**: a **Settings** dropdown under the top bar's gear
+  gathers the chrome you set once — an **App font** picker (Jost, the
+  shipped dyslexia-friendly OpenDyslexic (OFL), Comic Sans MS, Arial,
+  Segoe UI and a few more, applied to the whole interface), interface
+  text size, helper tips, performance mode, the tutorial and About;
+  a new **Colorblind Safe Dark** theme beside the light one; a **Quick Access
+  customizer** — tick which settings and one-click actions appear on
+  the strip above the tabs and it follows live; and **drag-and-drop
+  section reordering** — press Collapse all and every section header
+  becomes a handle, so each tab ends up in the order you work in. All of
+  it sticks between sessions.
+- **Depth on the plot**: the legend and the colorbar now sit together
+  without colliding; 2D stacked picks a separation that actually keeps
+  nineteen curves apart; the colormap gains **Shades** (continuous or a
+  set number of discrete **Levels**) and a **Trace colors** editor for
+  setting one curve by hand; the direct labels at the curve ends take a
+  size, a distance, bold and a box or halo **Backing**; and **3D shape**
+  can **mark the measured traces** on the surface so real data is told
+  apart from the interpolated fill. One **Graphics** dial — potato, low,
+  medium, high, best — sets how many quads the sheet is drawn from, with
+  relief shading and its strength, a quad **mesh**, polygon antialiasing
+  and **draft quality while rotating** as separate switches beside it;
+  orbiting a nineteen-trace surface draws the decimated draft while the
+  mouse moves and the full surface on release. The 3D Printing section
+  adds a **folder divider** shape — an upright plate whose top edge is
+  one trace's silhouette — beside the surface cube.
+- **Plain language everywhere**: every instructional surface — the Guide
+  views, the 22-page QUICKSTART, the [?] boxes, tooltips, hints, empty
+  states and the tour itself — is written to ASD-STE100 Simplified
+  Technical English. One fact per sentence, one name per thing, formulas
+  kept verbatim.
+- **Faster**: the interface-text-size control and theme switching no longer
+  pay several full re-layouts of the window. Text size and theme changes are
+  roughly 2× quicker than v1.4.8 on the same machine, a registry leak that
+  made every theme switch slower than the last is fixed, and the fringe
+  workbench is built on first use rather than at startup.
+- The test suite is now 426 tests.
 
 ## New in v1.4.8
 
@@ -251,16 +334,43 @@ any unsigned exe): More info -> Run anyway.
 |------|---------|
 | `app.py` | GUI, plotting, all controls |
 | `engine.py` | parse / concatenate / absorbance / naming profiles / CSV + provenance |
+| `formulas.py` | the formula registry and its whitelist evaluator |
 | `defringe.py` | FFT-notch defringe (interference-fringe removal) |
+| `fringe_*.py` | the vendored fringe core: optics, detection, notches, fits, stack, multiscale variance, materials + EOS |
+| `fringe_panel.py` | the Fringe workbench: FFT view, cards, solve, series |
+| `fringe_popout.py` | the pop-out replica of the original window |
+| `export3d.py` | surface grid, relief shading, watertight binary STL |
+| `guide_tour.py` | the guided tour, the welcome card, the guide loader |
+| `ui_prefs.py` | App font, section order, Quick Access pins |
 | `smoothing.py` | 5-step smoothing pipeline |
 | `colormaps.py` | Crameri + matplotlib colormaps |
 | `decomp.py` | known decompression-pressure sets |
-| `fonts/` | Jost typeface (OFL license included) |
-| `tests/` | pytest suite (parser, engine, sessions, plotting) |
+| `demo_data/` | the bundled synthetic dataset the tour runs on |
+| `docs/guide_content/` | the Guide panel's views, plus QUICKSTART.pdf |
+| `fonts/` | Jost and OpenDyslexic typefaces (OFL licenses included) |
+| `tests/` | pytest suite (parser, engine, sessions, plotting, fringe, UI) |
 | `beamline_tool.spec`, `version_info.txt` | PyInstaller build config |
 
 ## Version history
 
+- **v1.4.9** — diamond fringe workbench (Fringe tab, Plot | Fringe centre
+  switch, Detection gates, notch bands, Airy model stems, Solve for n and
+  t, per-card [?] maths, and a pop-out replica of the original window with
+  F11 full screen), vendored from Matthew R. Diamond's `defringe_dac.py`
+  with permission and validated against it to 1e-10; 3D shape surface with
+  measured-trace marking, relief shading and strength, a potato-to-best
+  Graphics dial, mesh / antialias / draft-while-rotating switches, and
+  watertight binary STL export including a folder-divider shape;
+  thickness-vs-pressure mode with `α = ln(10)·A/t` and `A/t` builtins;
+  decompression trace controls and decompression-list CSV ingestion;
+  guided tour, first-run welcome and a bundled synthetic `demo_data/`;
+  a top-bar Settings dropdown with an App font system (Jost, OpenDyslexic,
+  and more), Colorblind Safe Dark, a Quick Access customizer and
+  drag-and-drop section reordering; legend / colorbar coexistence, colormap Shades and Levels, a Trace
+  colors editor and backed direct labels; every instructional surface
+  rewritten to ASD-STE100 Simplified Technical English with a 22-page
+  QUICKSTART; ~2× faster text-size and theme changes; suite grown to
+  426 tests.
 - **v1.4.8** — SPARTA rebrand (formerly SQUISHE); generic experiment
   variable (pressure/temperature/dose/time/custom name+unit driving every
   label, file schema unchanged) with starrable saved presets; user-defined
@@ -313,11 +423,17 @@ any unsigned exe): More info -> Run anyway.
 
 ## Credits
 
+- Written by Nhan Ta, Dr. Lee's Lab, NSLS-II 22-IR-1.
+- The fringe-analysis core is Matthew R. Diamond's `defringe_dac.py`,
+  vendored with his permission (MIT) and refactored pandas-free; the
+  workbench follows his own routine:
+  [github.com/matthewrdiamond/DAC-Absorption-Fringe-Analysis](https://github.com/matthewrdiamond/DAC-Absorption-Fringe-Analysis)
 - FFT-notch defringe (`defringe.py`) contributed by
   [Matthew Diamond](https://github.com/matthewrdiamond).
 - Developed in Dr. Kanani K. M. Lee's lab for NSLS-II beamline 22-IR-1.
 
 ## License
 
-[MIT](LICENSE). The bundled Jost typeface is licensed separately under the
-SIL Open Font License 1.1 (`fonts/OFL.txt`).
+[MIT](LICENSE). The bundled Jost and OpenDyslexic typefaces are licensed
+separately under the SIL Open Font License 1.1 (`fonts/OFL.txt`,
+`fonts/OFL-OpenDyslexic.txt`).

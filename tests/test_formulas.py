@@ -2,10 +2,14 @@
 quantity model, CSV writer.
 
 Pure module tests, no Tk. The safety battery is the point of the first
-section: each of those strings must be REJECTED at validation, which in this
-design means it is never evaluated at all (the module contains no eval/exec
--- that is asserted too). The absorbance builtin is proved numerically equal
-to engine's own absorbance on random channels.
+section and is deliberately left one-case-per-test: each of those strings
+must be REJECTED at validation, which in this design means it is never
+evaluated at all (the module contains no eval/exec -- that is asserted too).
+The absorbance builtin is proved numerically equal to engine's own
+absorbance on random channels.
+
+Everything BELOW the safety section is grouped: a battery of near-identical
+numeric or typesetting cases is one test that loops, not thirty tests.
 """
 import json
 
@@ -117,7 +121,7 @@ def _cols(n=32, seed=3):
     d = rng.uniform(50.0, 150.0, n)
     b = d + rng.uniform(100.0, 5000.0, n)
     s = d + rng.uniform(100.0, 5000.0, n)
-    return {"S": s, "B": b, "D": d, "wl": wl,
+    return {"S": s, "B": b, "D": d, "wl": wl, "t": np.full(n, 25.0),
             "A": -np.log10((s - d) / (b - d))}
 
 
@@ -138,14 +142,17 @@ CASES = [
 ]
 
 
-@pytest.mark.parametrize("expr,ref", CASES)
-def test_evaluate_matches_numpy(expr, ref):
+def test_evaluate_matches_numpy():
+    """Every accepted form gives bit-comparable answers to the numpy the
+    user would have written by hand."""
     c = _cols()
-    got = F.evaluate(expr, c)
-    want = np.asarray(ref(c), float)
-    want = np.where(np.isfinite(want), want, np.nan)
-    assert got.shape == want.shape
-    assert np.allclose(got, want, rtol=1e-12, atol=0.0, equal_nan=True)
+    for expr, ref in CASES:
+        got = F.evaluate(expr, c)
+        want = np.asarray(ref(c), float)
+        want = np.where(np.isfinite(want), want, np.nan)
+        assert got.shape == want.shape, expr
+        assert np.allclose(got, want, rtol=1e-12, atol=0.0, equal_nan=True), \
+            expr
 
 
 def test_non_finite_becomes_nan_without_warning():
@@ -165,17 +172,14 @@ def test_non_finite_becomes_nan_without_warning():
     assert np.isnan(lg[0]) and lg[1] == 0.0 and np.isnan(lg[2])
 
 
-def test_constant_expression_and_scalar_columns():
+def test_scalar_integer_and_missing_column_inputs():
+    """Constants, scalar columns, integer columns, and the two ways a data
+    dict can be wrong."""
     assert float(F.evaluate("2 * 3 + 1", {})) == 7.0
     assert float(F.evaluate("S / B", {"S": 4.0, "B": 2.0})) == 2.0
-
-
-def test_integer_columns_are_promoted():
-    c = {"S": np.array([6, 8]), "B": np.array([2, 4])}
-    assert np.allclose(F.evaluate("S / B", c), [3.0, 2.0])
-
-
-def test_missing_column_and_length_mismatch():
+    assert np.allclose(F.evaluate("S / B", {"S": np.array([6, 8]),
+                                            "B": np.array([2, 4])}),
+                       [3.0, 2.0])
     with pytest.raises(F.FormulaError) as e:
         F.evaluate("S - D", {"S": np.ones(4)})
     assert "no data for column 'D'" in str(e.value)
@@ -208,8 +212,6 @@ def test_alias_resolution_in_expression_and_in_data():
     assert np.allclose(
         F.evaluate("(sample - Dark) / (BACKGROUND - D)", c), ref, equal_nan=True)
 
-
-def test_canonical_and_inputs_of():
     assert F.canonical("Sample") == "S" and F.canonical("bg_c") == "B"
     assert F.canonical("nm") == "wl" and F.canonical("absorbance") == "A"
     assert F.canonical("nope") is None
@@ -275,20 +277,19 @@ def mathtext_parse():
     return MathTextParser("path").parse
 
 
-@pytest.mark.parametrize("expr,tex", TEX_BATTERY)
-def test_mathtext_string_and_renders(expr, tex, mathtext_parse):
-    assert F.expr_to_mathtext(expr) == tex
-    mathtext_parse(tex)                      # raises if matplotlib can't draw it
+def test_mathtext_strings_and_they_all_render(mathtext_parse):
+    """Every supported form typesets to the expected LaTeX, and matplotlib
+    can actually draw what came out."""
+    for expr, tex in TEX_BATTERY:
+        assert F.expr_to_mathtext(expr) == tex, expr
+        mathtext_parse(tex)          # raises if matplotlib can't draw it
 
 
-def test_builtin_mathtext_renders(mathtext_parse):
+def test_builtin_latex_renders_and_bad_latex_is_caught(mathtext_parse):
     for q in F.BUILTINS:
         assert q["latex"].startswith("$") and q["latex"].endswith("$")
         mathtext_parse(q["latex"])
         assert F.mathtext_problems(q["latex"]) == []
-
-
-def test_mathtext_problems_catches_bad_latex():
     assert F.mathtext_problems("") == ["LaTeX is empty"]
     assert F.mathtext_problems("$x") == ["unbalanced '$' in the LaTeX"]
     bad = F.mathtext_problems(r"$\frac{a}$")
@@ -297,18 +298,16 @@ def test_mathtext_problems_catches_bad_latex():
 
 
 # ---- quantity model -------------------------------------------------------
-def test_make_quantity_autofills_latex_and_key():
+def test_make_quantity_autofills_and_honours_an_override():
     q = F.make_quantity("Optical density", "-log10(S / B)", unit="OD")
     assert q["key"] == "Optical_density" and q["unit"] == "OD"
     assert q["latex"] == r"$-\log_{10}\left(\frac{S}{B}\right)$"
     assert q["builtin"] is False
     assert F.validate_quantity(q) == []
 
-
-def test_latex_override_wins_and_is_checked():
-    q = F.make_quantity("Ratio", "S / B", latex=r"$R_{\mathrm{obs}}$")
-    assert q["latex"] == r"$R_{\mathrm{obs}}$"     # not the auto-derived \frac
-    assert F.validate_quantity(q) == []
+    over = F.make_quantity("Ratio", "S / B", latex=r"$R_{\mathrm{obs}}$")
+    assert over["latex"] == r"$R_{\mathrm{obs}}$"   # not the auto \frac
+    assert F.validate_quantity(over) == []
     bad = F.make_quantity("Ratio", "S / B", latex=r"$\frac{a}$")
     assert any("does not render" in p for p in F.validate_quantity(bad))
     # clearing the override falls back to the auto form
@@ -316,19 +315,16 @@ def test_latex_override_wins_and_is_checked():
         r"$\frac{S}{B}$"
 
 
-def test_invalid_expr_stores_but_reports():
+def test_invalid_quantity_stores_but_reports():
     q = F.make_quantity("Broken", "S ** 99")
     assert q["latex"] == ""
-    probs = F.validate_quantity(q)
-    assert any("exponent" in p for p in probs)
-    q2 = F.make_quantity("", "S / B")
-    assert "name is empty" in F.validate_quantity(q2)
-    q3 = F.make_quantity("Ratio", "S / B")
-    assert any("already called" in p
-               for p in F.validate_quantity(q3, taken=["Ratio", "Other"]))
+    assert any("exponent" in p for p in F.validate_quantity(q))
+    assert "name is empty" in F.validate_quantity(F.make_quantity("", "S / B"))
+    assert any("already called" in p for p in F.validate_quantity(
+        F.make_quantity("Ratio", "S / B"), taken=["Ratio", "Other"]))
 
 
-def test_quantity_json_roundtrip():
+def test_quantity_json_roundtrip_and_key_slugs():
     qs = F.default_quantities() + [
         F.make_quantity("Transmittance %", "100 * (S - D) / (B - D)", unit="%"),
         F.make_quantity(u"Δ absorbance", "A - 1", latex=r"$\Delta A$")]
@@ -341,22 +337,11 @@ def test_quantity_json_roundtrip():
         assert isinstance(q["builtin"], bool)
         assert F.validate_quantity(q) == []
 
-
-def test_builtins_are_flagged_and_copies_are_independent():
-    assert [q["name"] for q in F.BUILTINS] == ["Absorbance", "Transmittance"]
-    assert all(F.is_builtin(q) for q in F.BUILTINS)
-    assert not F.is_builtin(F.make_quantity("x", "S"))
-    fresh = F.default_quantities()
-    fresh[0]["name"] = "clobbered"
-    assert F.BUILTINS[0]["name"] == "Absorbance"
-
-
-def test_quantity_key_slugs():
     assert F.quantity_key("Optical Density") == "Optical_Density"
     assert F.quantity_key("A/B ratio (raw)") == "A_B_ratio_raw"
     assert F.quantity_key("  spaced  out  ") == "spaced_out"
     assert F.quantity_key(u"café résumé") == "cafe_resume"
-    assert F.quantity_key(u"Δα") == "quantity"       # nothing ASCII left
+    assert F.quantity_key(u"Δα") == "quantity"   # nothing ASCII left
     assert F.quantity_key("***") == "quantity"
     assert F.quantity_key("2nd derivative") == "q2nd_derivative"
     # collisions get distinct keys, so two quantities never share a CSV column
@@ -371,11 +356,21 @@ def test_quantity_key_slugs():
     assert F.make_quantity("Ratio", "S / B", taken=["Ratio"])["key"] == "Ratio_2"
 
 
-def test_evaluate_quantity():
-    c = _cols()
+def test_builtins_are_flagged_evaluate_and_copies_are_independent():
+    """The shipped set is Absorbance / Transmittance plus the two v1.4.9
+    thickness quantities; every one evaluates over the standard columns."""
+    assert [q["name"] for q in F.BUILTINS] == [
+        "Absorbance", "Transmittance", "Absorption coefficient", "A/t"]
+    assert all(F.is_builtin(q) for q in F.BUILTINS)
+    assert not F.is_builtin(F.make_quantity("x", "S"))
+    fresh = F.default_quantities()
+    fresh[0]["name"] = "clobbered"
+    assert F.BUILTINS[0]["name"] == "Absorbance"
+
+    c = _cols()                       # carries t, so alpha and A/t resolve
     for q in F.BUILTINS:
         got = F.evaluate_quantity(q, c)
-        assert got.shape == c["S"].shape and np.isfinite(got).all()
+        assert got.shape == c["S"].shape and np.isfinite(got).all(), q["name"]
 
 
 # ---- the absorbance builtin IS the pipeline's absorbance -------------------
@@ -446,8 +441,6 @@ def test_write_quantity_csv(tmp_path):
     assert head[2] == "# trace: D42 fo90 1.39 GPa"
     assert head[3] == "Wavelength_nm,Transmittance_pct"
 
-
-def test_write_quantity_csv_length_guard(tmp_path):
     with pytest.raises(F.FormulaError):
         F.write_quantity_csv(str(tmp_path / "x.csv"), np.ones(3), np.ones(4),
                              F.BUILTINS[0])

@@ -1,0 +1,256 @@
+{
+  "schema": "sparta_guide_content/v1",
+  "written_for": "SPARTA v1.4.9",
+  "source_of_truth": "app.py v1.4.9 sha 903b16af02e0, fringe_panel.py, fringe_popout.py, engine.py, formulas.py, defringe.py, smoothing.py, README.md, DESIGN_RULES.md, PLAN_v149.md",
+  "consumer": "the wiring agent: build REF_VIEWS from `views` in `dropdown_order`",
+  "format_contract": {
+    "line_width": "wrapped at or under 72 characters",
+    "headings": "ALL-CAPS, column 0, first character alphabetic",
+    "indent": "two spaces per nesting level; six or more spaces marks a line whose horizontal alignment is meaningful (render monospace)",
+    "emoji": "none",
+    "tables": "none wider than 72 characters",
+    "editorial_markers": "HTML comments <!-- v149: ... --> mark content written from PLAN_v149 rather than from shipped code. Strip them before display; act on them before shipping."
+  },
+  "honesty_gate": {
+    "mechanism": "app.py --selftest calls guide_tour.bad_headings(app, PANEL_GUIDE). It asserts that every ALL-CAPS line (from line 2 on) of PANEL_GUIDE and of every view here with gate='section_headings' AND live!=false is either '<TAB> > <SECTION>' built from the live _group titles, or starts with LEFT PANEL / TOP BAR / PLOT AREA.",
+    "live_flag": "A view is checked unless it carries \"live\": false. That flag is how a view written ahead of its panel ships without breaking the gate; the patch that builds the panel flips it to true in the same change.",
+    "files_carrying_gated_headings": [
+      "20_plot_tab.md",
+      "21_axes_tab.md",
+      "22_style_tab.md",
+      "23_data_tab_formulas.md",
+      "24_export_tab.md",
+      "30_fringe_workbench.md"
+    ],
+    "rule_for_those_files": "line 1 is the view title and is exempt (matching PANEL_GUIDE's own convention). Every other ALL-CAPS line in these six files is a valid gated heading - checked mechanically against the live _group titles. Sub-topics and prose headings inside them are deliberately Title Case so they cannot trip the gate.",
+    "verified": "all six gated files pass; every live right-panel section is documented; no file has a line over 72 characters; no emoji anywhere.  The Fringe headings are live: the Fringe tab's cards ship as _group() titles registered in _section_cat under the tab label 'Fringe'. v1.4.9 R1a moved DEFRINGE out of the Data tab into the Fringe tab (its content now heads 30_fringe_workbench.md) and reordered the notebook to Plot, Axes, Style, Data, Fringe, Export. R2 renamed the Export section '3D shape' to '3D Printing' (heading EXPORT > 3D PRINTING; the WATERFALL MODE keeps the old name). R7 regrouped the Fringe tab into Matthew Diamond's own card set. R14 put Detection back on the column as its own card, so FRINGE > DETECTION is a heading again and Panels lists the four remaining pop-outs. R14 also moved App font, App text size, Helper tips, Performance mode, Tutorial and About into the top bar's Settings panel, so TOP BAR > SETTINGS replaces TOP BAR > APP FONT, TOP BAR > APP TEXT SIZE and LEFT PANEL > PERFORMANCE MODE.",
+    "exempt_files": [
+      "00_quick_start.md",
+      "10_data_input.md",
+      "11_naming_system.md",
+      "31_thickness_plots.md",
+      "40_workflows.md",
+      "50_shortcuts.md",
+      "60_troubleshooting.md"
+    ],
+    "note_on_exempt_files": "these carry topic headings, not panel-section headings. If the gate is widened past PANEL_GUIDE, exempt these views by name rather than rewriting their headings.",
+    "gated_headings_used": [
+      "PLOT > PLOT MODE",
+      "PLOT > WATERFALL (2D / 3D PLOTTING)",
+      "PLOT > 2D PLOT OPTIONS",
+      "PLOT > 3D PLOT OPTIONS",
+      "AXES > AXIS",
+      "AXES > LIMITS & SCALE",
+      "AXES > TICKS",
+      "AXES > FRAME & GRID",
+      "STYLE > COLORS & COLORMAP",
+      "STYLE > FONTS",
+      "STYLE > TITLE & AXIS LABELS",
+      "STYLE > LEGEND",
+      "STYLE > COLORBAR",
+      "STYLE > REFERENCE LINES",
+      "DATA > SMOOTHING",
+      "DATA > TRACES",
+      "DATA > FORMULAS",
+      "EXPORT > PRESETS & PROJECTS",
+      "EXPORT > FIGURE",
+      "EXPORT > EXPORT",
+      "EXPORT > 3D PRINTING",
+      "LEFT PANEL > FOLDERS",
+      "LEFT PANEL > NAME FORMAT",
+      "LEFT PANEL > RESCAN",
+      "LEFT PANEL > PROGRESS AND GUIDE / NOTES",
+      "TOP BAR > THEME",
+      "PLOT AREA > SESSION TABS",
+      "PLOT AREA > DATA TABLE",
+      "FRINGE > STACK",
+      "FRINGE > SESSION",
+      "FRINGE > PRESSURE POINT",
+      "FRINGE > FFT REMOVAL",
+      "FRINGE > REFRACTIVE INDEX FROM INTENSITY",
+      "FRINGE > PANELS",
+      "TOP BAR > SETTINGS",
+      "FRINGE > DETECTION"
+    ]
+  },
+  "views": [
+    {
+      "view": "Quick start",
+      "file": "00_quick_start.md",
+      "title_line": "QUICK START",
+      "replaces": "QUICK_START",
+      "gate": "exempt",
+      "v149_content": false,
+      "notes": "The ten-minute path. References the bundled demo dataset generically; no demo filename is load-bearing. Required by PLAN_v149 Phase D5c."
+    },
+    {
+      "view": "Data input",
+      "file": "10_data_input.md",
+      "title_line": "DATA INPUT",
+      "replaces": null,
+      "gate": "exempt",
+      "v149_content": false,
+      "notes": "Folders, run outputs, grouping rules, rescan, viewer mode. Expands the LEFT PANEL blocks of PANEL_GUIDE."
+    },
+    {
+      "view": "Naming system",
+      "file": "11_naming_system.md",
+      "title_line": "NAMING SYSTEM",
+      "replaces": null,
+      "gate": "exempt",
+      "v149_content": false,
+      "notes": "The deep dive: tokens, both profile kinds, every field, the parse order, teach-by-example, the guesser, worked examples (letters, .01, -1, single-cell), edge cases, per-file fixes."
+    },
+    {
+      "view": "Plot tab",
+      "file": "20_plot_tab.md",
+      "title_line": "PLOT TAB",
+      "replaces": null,
+      "gate": "section_headings",
+      "v149_content": true,
+      "notes": "v149 content verified against the shipped panel (R2): the Thickness plot mode is the third radio in PLOT > PLOT MODE, the Decompression traces controls are a sub-heading inside PLOT > 2D PLOT OPTIONS, and the 3D-surface rows (Surface detail / Interpolation with its Straight-Smooth menu and its [?] / Relief shading / Fill underside / Fill color) live under their own '3D shape' sub-heading inside PLOT > 3D PLOT OPTIONS (R4 item 5) and match the on-screen labels."
+    },
+    {
+      "view": "Axes tab",
+      "file": "21_axes_tab.md",
+      "title_line": "AXES TAB",
+      "replaces": null,
+      "gate": "section_headings",
+      "v149_content": false
+    },
+    {
+      "view": "Style tab",
+      "file": "22_style_tab.md",
+      "title_line": "STYLE TAB",
+      "replaces": null,
+      "gate": "section_headings",
+      "v149_content": false
+    },
+    {
+      "view": "Data tab & formulas",
+      "file": "23_data_tab_formulas.md",
+      "title_line": "DATA TAB",
+      "replaces": null,
+      "gate": "section_headings",
+      "v149_content": true,
+      "notes": "Carries the v149 markers for the t column and the alpha / A-over-t builtins. The DEFRINGE block moved to 30_fringe_workbench.md in R1a with the section itself."
+    },
+    {
+      "view": "Export tab",
+      "file": "24_export_tab.md",
+      "title_line": "EXPORT TAB",
+      "replaces": null,
+      "gate": "section_headings",
+      "v149_content": false
+    },
+    {
+      "view": "Fringe analysis",
+      "file": "30_fringe_workbench.md",
+      "title_line": "FRINGE WORKBENCH",
+      "replaces": null,
+      "gate": "section_headings",
+      "live": true,
+      "v149_content": true,
+      "notes": "Checked against the shipped Fringe tab (Phase B): every control name in this view is the label on screen."
+    },
+    {
+      "view": "Thickness plots",
+      "file": "31_thickness_plots.md",
+      "title_line": "THICKNESS PLOTS",
+      "replaces": null,
+      "gate": "exempt",
+      "v149_content": true
+    },
+    {
+      "view": "Workflows",
+      "file": "40_workflows.md",
+      "title_line": "WORKFLOWS",
+      "replaces": null,
+      "gate": "exempt",
+      "v149_content": true,
+      "notes": "Goal-oriented recipes. One recipe (thickness vs pressure) is v149-marked."
+    },
+    {
+      "view": "Absorbance reference",
+      "file": null,
+      "title_line": "ABSORBANCE",
+      "replaces": "INFO_TEXT",
+      "gate": "exempt",
+      "v149_content": false,
+      "notes": "Existing INFO_TEXT, unchanged. Kept in the dropdown as-is."
+    },
+    {
+      "view": "Panel guide",
+      "file": null,
+      "title_line": "PANEL GUIDE",
+      "replaces": "PANEL_GUIDE",
+      "gate": "section_headings",
+      "v149_content": false,
+      "notes": "Existing PANEL_GUIDE, unchanged. Alternative: replace it with the concatenation of 20..24 under its current preamble. The gated headings in those five files are a superset of PANEL_GUIDE's, so the honesty gate still passes; 20_plot_tab.md's LEFT PANEL / TOP BAR / PLOT AREA blocks would need de-duplicating against the preamble first."
+    },
+    {
+      "view": "Keyboard shortcuts",
+      "file": "50_shortcuts.md",
+      "title_line": "KEYBOARD SHORTCUTS",
+      "replaces": "SHORTCUTS_TEXT",
+      "gate": "exempt",
+      "v149_content": false,
+      "notes": "Verified line by line against _bind_shortcuts and the plot context menu. Also the text F1 pops up."
+    },
+    {
+      "view": "Troubleshooting",
+      "file": "60_troubleshooting.md",
+      "title_line": "TROUBLESHOOTING",
+      "replaces": null,
+      "gate": "exempt",
+      "v149_content": true,
+      "notes": "Symptom-first. Every quoted skip reason and health-flag message is copied verbatim from engine.py."
+    },
+    {
+      "view": "My notes",
+      "file": null,
+      "title_line": null,
+      "replaces": null,
+      "gate": "exempt",
+      "v149_content": false,
+      "notes": "The existing editable scratchpad. Must stay LAST in the dropdown and stay the only editable view."
+    }
+  ],
+  "dropdown_order": [
+    "Quick start",
+    "Data input",
+    "Naming system",
+    "Plot tab",
+    "Axes tab",
+    "Style tab",
+    "Data tab & formulas",
+    "Export tab",
+    "Fringe analysis",
+    "Thickness plots",
+    "Workflows",
+    "Absorbance reference",
+    "Panel guide",
+    "Keyboard shortcuts",
+    "Troubleshooting",
+    "My notes"
+  ],
+  "dropdown_order_rationale": "Task order first (get data in, understand the names), then the panel tour tab by tab in the panel's own order, then the new analysis views, then the reference material, then the two lists, then troubleshooting, then the scratchpad. 'Quick start' stays the default view for a first-run user; the settings key ref_view already remembers the last pick and falls back to 'Quick start' when the stored name is unknown, so adding views is backward compatible.",
+  "minimum_required_by_plan": [
+    "Quick start",
+    "Fringe analysis"
+  ],
+  "pdf": {
+    "builder": "quickstart_pdf_build.py",
+    "output": "docs/QUICKSTART.pdf",
+    "sections": [
+      "00_quick_start.md",
+      "11_naming_system.md",
+      "40_workflows.md",
+      "50_shortcuts.md"
+    ],
+    "notes": "matplotlib PdfPages only, no new dependencies. Version is parsed from app.py's APP_VERSION and can be overridden with --version. Ships inside both release zips per PLAN_v149 Phase D5d."
+  },
+  "open_questions": [],
+  "open_questions_resolved": "R2 audit: the seven questions this list carried are all settled in shipped code - Decompression traces is a sub-heading inside PLOT > 2D PLOT OPTIONS (no new gated heading); Thickness is the third Plot-mode radio; the alpha and A/t builtins and the t column ship as 23_data_tab_formulas.md documents them; the Fringe card titles are live _group() titles; the pop-out helper-guide card ships in fringe_panel.py; 00_quick_start.md names demo_data.",
+  "register": "STE100 round 3 (PLAN_v149, R14 item D): one fact per sentence, under 20 words, active voice, present tense; 'the tool' is the only agent; no negative sentence; no should / must / need aimed at the user; no idiom, metaphor, rhetorical question or contrast pair; formulas verbatim on their own lines. Checked by lint_r12.py with the N (negation), S (directive) and L (sentence length) detectors. Protected widget text and verbatim Progress-log quotes are listed in the sweep's whitelist."
+}

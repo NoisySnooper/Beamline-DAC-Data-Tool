@@ -2,27 +2,25 @@
 Legend ordering / dedup / channel-tag tests for App._ordered_legend.
 
 Locks the v1.2.2 fix that collapsed nine identical "0.00 GPa - C" entries
-into distinct, tagged labels. Needs a Tk display, so the whole module skips
-cleanly on a headless box (the lab Windows machine has one).
+into distinct, tagged labels, and the v1.4.8 branch-tag controls (display
+only: the internal branch keys, the D-list files, the C/D-tagged CSV export
+letters and filename parsing all stay exactly C / D).
+
+Runs against the suite's ONE shared App (tests/conftest.py); the shipped
+branch defaults are restored between tests by the shared reset fixture.
 """
 import numpy as np
 import pytest
 
-try:
-    import tkinter as tk
-    # Reuse an existing default root if another GUI test module already made
-    # one: this Windows Store Python cannot spin up a SECOND independent Tk()
-    # interpreter (see test_sessions.py). Without this the whole module
-    # silently skipped whenever it was not the FIRST GUI module imported.
-    _root = tk._default_root or tk.Tk()
-    _root.withdraw()
-    import app
-    _APP = app.App(_root)
-    _HAVE_GUI = True
-except Exception:                      # no display, or Tk missing
-    _HAVE_GUI = False
+from conftest import gui, shared_app
 
-pytestmark = pytest.mark.skipif(not _HAVE_GUI, reason="no Tk display")
+USES_APP = True
+pytestmark = gui
+
+
+@pytest.fixture(scope="module")
+def a():
+    return shared_app()
 
 
 def _raw(sample, ch):
@@ -41,82 +39,51 @@ def _full(sample):
             "samp_c": fin, "bg_c": fin, "dark_c": fin}
 
 
-def _labels(entries):
-    return _APP._ordered_legend(entries)[1]
-
-
-def test_same_pressure_raw_disambiguated_by_sample():
+def test_raw_traces_are_disambiguated_and_duplicates_collapse(a):
+    """Same value, same branch, raw-only: the channel tag plus the sample
+    name make them distinct -- unless the RECORD is literally the same one,
+    which collapses.  The plain 3-tuple form still works."""
     e = [(1, 0.0, "C", _raw("gasket2", "b")),
          (2, 0.0, "C", _raw("gasket3", "b")),
          (3, 0.1, "C", _full("gasket"))]
-    assert _labels(e) == ["0.00 GPa - C [B only]  gasket2",
-                          "0.00 GPa - C [B only]  gasket3",
-                          "0.10 GPa - C"]
-
-
-def test_exact_duplicates_collapse():
+    assert a._ordered_legend(e)[1] == ["0.00 GPa - C [B only]  gasket2",
+                                       "0.00 GPa - C [B only]  gasket3",
+                                       "0.10 GPa - C"]
     r = _raw("gasket2", "b")
-    e = [(1, 0.0, "C", r), (2, 0.0, "C", r), (3, 0.1, "C", _full("gasket"))]
-    assert _labels(e) == ["0.00 GPa - C [B only]  gasket2", "0.10 GPa - C"]
+    dup = [(1, 0.0, "C", r), (2, 0.0, "C", r), (3, 0.1, "C", _full("gasket"))]
+    assert a._ordered_legend(dup)[1] == ["0.00 GPa - C [B only]  gasket2",
+                                         "0.10 GPa - C"]
+    # the shipped rendering of the 3-tuple form is the contract
+    assert a._ordered_legend([(1, 0.5, "C"), (2, 1.0, "D")])[1] == \
+        ["0.50 GPa - C", "1.00 GPa - D"]
 
 
-def test_three_tuple_backward_compatible():
-    e = [(1, 0.5, "C"), (2, 1.0, "D")]
-    assert _labels(e) == ["0.50 GPa - C", "1.00 GPa - D"]
-
-
-# ------------------------------------ v1.4.8: legend branch-tag controls ---
-# Display only: the internal branch keys, the D-list files, the C/D-tagged
-# CSV export letters and filename parsing all stay exactly C / D.
-@pytest.fixture(autouse=True)
-def _default_branch_controls():
-    """Every test in this module starts from the shipped defaults."""
-    for var, val in ((_APP.legend_branch_tags, True),
-                     (_APP.legend_branch_c, "C"),
-                     (_APP.legend_branch_d, "D")):
-        var.set(val)
-    yield
-    for var, val in ((_APP.legend_branch_tags, True),
-                     (_APP.legend_branch_c, "C"),
-                     (_APP.legend_branch_d, "D")):
-        var.set(val)
-
-
-def test_default_branch_suffix_is_unchanged():
-    """The shipped rendering is the contract."""
-    assert _labels([(1, 0.5, "C"), (2, 1.0, "D")]) == ["0.50 GPa - C",
-                                                       "1.00 GPa - D"]
-
-
-def test_branch_tags_off_drops_the_suffix():
-    _APP.legend_branch_tags.set(False)
-    assert _labels([(1, 0.5, "C"), (2, 1.0, "D")]) == ["0.50 GPa",
-                                                       "1.00 GPa"]
+def test_branch_tags_off_drops_the_suffix(a):
+    a.legend_branch_tags.set(False)
+    assert a._ordered_legend([(1, 0.5, "C"), (2, 1.0, "D")])[1] == \
+        ["0.50 GPa", "1.00 GPa"]
     # and the ordering is untouched: C ascending, then D descending
-    assert _labels([(1, 2.0, "D"), (2, 0.5, "C"), (3, 4.0, "D")]) == \
+    assert a._ordered_legend([(1, 2.0, "D"), (2, 0.5, "C"),
+                              (3, 4.0, "D")])[1] == \
         ["0.50 GPa", "4.00 GPa", "2.00 GPa"]
 
 
-def test_custom_branch_labels_appear_in_the_legend():
-    _APP.legend_branch_c.set("heat")
-    _APP.legend_branch_d.set("cool")
-    assert _labels([(1, 0.5, "C"), (2, 1.0, "D")]) == ["0.50 GPa - heat",
-                                                       "1.00 GPa - cool"]
-    # a blank box falls back to the canonical letter
-    _APP.legend_branch_c.set("   ")
-    assert _labels([(1, 0.5, "C")]) == ["0.50 GPa - C"]
-
-
-def test_custom_branch_labels_do_not_reorder_anything():
-    """The words are cosmetic; sorting still keys off the real C / D."""
-    _APP.legend_branch_c.set("cool")      # deliberately swapped wording
-    _APP.legend_branch_d.set("heat")
-    assert _labels([(1, 2.0, "D"), (2, 0.5, "C"), (3, 1.0, "C")]) == \
+def test_custom_branch_labels_are_cosmetic_only(a):
+    a.legend_branch_c.set("heat")
+    a.legend_branch_d.set("cool")
+    assert a._ordered_legend([(1, 0.5, "C"), (2, 1.0, "D")])[1] == \
+        ["0.50 GPa - heat", "1.00 GPa - cool"]
+    a.legend_branch_c.set("   ")               # blank -> the canonical letter
+    assert a._ordered_legend([(1, 0.5, "C")])[1] == ["0.50 GPa - C"]
+    # deliberately swapped wording: sorting still keys off the real C / D
+    a.legend_branch_c.set("cool")
+    a.legend_branch_d.set("heat")
+    assert a._ordered_legend([(1, 2.0, "D"), (2, 0.5, "C"),
+                              (3, 1.0, "C")])[1] == \
         ["0.50 GPa - cool", "1.00 GPa - cool", "2.00 GPa - heat"]
 
 
-def test_branch_controls_round_trip_through_the_preset_registry():
-    a = _APP
+def test_branch_controls_round_trip_through_the_preset_registry(a):
     reg = a._preset_registry()
     for k in ("legend_branch_tags", "legend_branch_c", "legend_branch_d"):
         assert k in reg, k
@@ -124,7 +91,7 @@ def test_branch_controls_round_trip_through_the_preset_registry():
     a.legend_branch_tags.set(False)
     a.legend_branch_c.set("inc")
     a.legend_branch_d.set("dec")
-    saved = {k: v.get() for k, v in a._preset_registry().items()}
+    saved = {k: v.get() for k, v in reg.items()}
 
     a._apply_preset_data(dict(a._defaults))             # wander off
     assert a.legend_branch_tags.get() is True
@@ -133,12 +100,9 @@ def test_branch_controls_round_trip_through_the_preset_registry():
     a._apply_preset_data(saved)                         # and come back
     assert a.legend_branch_tags.get() is False
     assert (a.legend_branch_c.get(), a.legend_branch_d.get()) == ("inc", "dec")
+
+    # a pre-v1.4.8 payload has none of these keys: the defaults must survive
     a._apply_preset_data(dict(a._defaults))
-    assert _labels([(1, 0.5, "C")]) == ["0.50 GPa - C"]
-
-
-def test_legacy_preset_without_the_branch_keys_keeps_the_defaults():
-    a = _APP
     a._apply_preset_data({"cmap": "magma", "legend_on": True})
     assert a.legend_branch_tags.get() is True
-    assert _labels([(1, 0.5, "D")]) == ["0.50 GPa - D"]
+    assert a._ordered_legend([(1, 0.5, "D")])[1] == ["0.50 GPa - D"]
